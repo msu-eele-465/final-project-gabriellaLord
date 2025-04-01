@@ -12,12 +12,12 @@ My system will use three equidistant microphones (CMEJ-0706-42-P) to triangulate
 
 I will need to order 3 CMEJ-0706-42-P microphones. Other required hardware, which I have, is: 1 MSP430fr2355; 2 MSP430fr2310; 1 Parallax Membrane Keypad; 1 NHD-0216HZ-FSW-FBW-33V3C LCD; 1 RGB LED. The figure shown below is the circuit diagram for this project proposal.
 
-![CircuitDiagram-gabby](../assets/CircuitDiagram-gabby.png)
+![CircuitDiagram-gabby](../assets/CircuitDiagram-gabby.svg)
 ## Software overview
 
 The microphone slave will have code to triangulate the direction of the sound and send coordinates to the master. The master will take the coordinates from the microphone slave and send it to the LCD slave to display the information.
 
-![FlowChart-gabby](../assets/FlowChart-gabby.png)
+![FlowChart-gabby](../assets/FlowChart-gabby.svg)
 
 ## Testing Procedure
 
