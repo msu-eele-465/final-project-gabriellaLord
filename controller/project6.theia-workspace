@@ -1,0 +1,22 @@
+{
+  "folders": [
+    {
+      "path": "file:///c%3A/Users/gabri/Documents/Spring2025/EELE465/project6-gabby-iker"
+    }
+  ],
+  "settings": {},
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "controller",
+        "type": "ccs-debug",
+        "request": "launch",
+        "projectInfo": {
+          "name": "controller",
+          "resourceId": "/controller"
+        }
+      }
+    ]
+  }
+}
