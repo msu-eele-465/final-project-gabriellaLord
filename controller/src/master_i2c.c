@@ -99,14 +99,7 @@ __interrupt void EUSCI_B1_I2C_ISR(void)
     switch (UCB1IV)
     {
         case 0x16:                      // RXIFG0
-            // if (address = ds3231)
-                // if (UCB1RXBUF = 6)
-                    // time_in = 0;
-                    // master_i2c_send(0, ds3231);
-                // else
-                    time_in = UCB1RXBUF;
-            // if address = lm92
-                // temp_in = UCB1RXBUF;
+            time_in = UCB1RXBUF;
             i2c_done = true;
             break;
 
