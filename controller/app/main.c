@@ -5,11 +5,14 @@
 #include <stdio.h>
 #include "intrinsics.h"
 #include "../../src/master_i2c.h"
+#include "../../src/heartbeat.h"
+#include "../../src/rgb_led.h"
 
 //------------------------------------------------------------------------------
 // Constants and Definitions
 //------------------------------------------------------------------------------
-#define SAMPLE_SIZE 25                      // Number of samples per channel
+#define SAMPLE_SIZE 100                     // Number of samples per channel
+#define SAMPLE_STEP 5                       // How often to update
 #define SPEED_OF_SOUND 343.0f               // Speed of sound in m/s
 #define MIC_DISTANCE 0.26f                  // Distance between microphones in meters
 #define PI 3.1415926f                       // Pi constant
@@ -26,6 +29,7 @@ volatile float timeDelay;                   // Calculated time delay (us)
 volatile bool adc_ready = false;            // 
 volatile unsigned int adc_result = 0;       // Reading from ADC
 volatile unsigned int sample_index = 0;     // Start at the begining of the array
+volatile unsigned int filled_samples = 0;   // To track how many samples have been filled
 volatile float left_row[SAMPLE_SIZE] = {0};
 volatile float right_row[SAMPLE_SIZE] = {0};
 
@@ -144,48 +148,45 @@ int find_max_index(const float *arr, int len) {
 /* Computes the cross-correlation between two signals x and y
    Stores results in corr and corresponding lags in lag */
 void xcorr(volatile float *x, volatile float *y, float *corr, int *lag) {
-    int len = 2 * SAMPLE_SIZE - 1;
-    int mid = SAMPLE_SIZE - 1;
-    int i;
-    int j;
+    int len = 2 * SAMPLE_STEP - 1;
+    int mid = SAMPLE_STEP - 1;
+    int i, j;
 
     for (i = 0; i < len; i++) {
         int shift = i - mid;
         lag[i] = shift;
         corr[i] = 0.0f;
 
-        for (j = 0; j < SAMPLE_SIZE; j++) {
-            int k = j - shift;
-            if (k >= 0 && k < SAMPLE_SIZE) {
-                corr[i] += x[j] * y[k];
-            }
+        for (j = 0; j < SAMPLE_STEP; j++) {
+            int xi = (sample_index + j - SAMPLE_STEP + SAMPLE_SIZE) % SAMPLE_SIZE;
+            int yi = (xi - shift + SAMPLE_SIZE) % SAMPLE_SIZE;
+            corr[i] += x[xi] * y[yi];
         }
     }
 }
 
 /* Calculates the angle of arrival (AOA) of a sound wave in degrees */
 void calculate_aoa(void) {
-    int len = 2 * SAMPLE_SIZE - 1;
+    int len = 2 * SAMPLE_STEP - 1;
     xcorr(left_row, right_row, crossCorr, lags);
 
     int index = find_max_index(crossCorr, len);
     timeDelay = (float)lags[index] / FS;
 
     float ratio = timeDelay * SPEED_OF_SOUND / MIC_DISTANCE;
-    
-    // Clamp the value to the valid domain of acos
+
     if (ratio > 1.0f) ratio = 1.0f;
     if (ratio < -1.0f) ratio = -1.0f;
 
-    // Calculate angle of arrival [0, 180] b/c only two microphones
     aoa = my_acos(ratio) * 180.0f / PI;
-
-    __no_operation();       // Place a breakpoint here to inspect 'aoa'
+    __no_operation();
 }
 //--End Triangulation Equations-----------------------------------------
 
 int main(void) {
     system_init();              // Configure MSP430
+    heartbeat_init();
+    rgb_led_init();
     master_i2c_init();
     adc_init();                 // Initalize for ADC     
     __enable_interrupt();
@@ -200,15 +201,30 @@ int main(void) {
             send_nat_4_digit('A', aoa_int);
             send_int_3_digit('B', timeDelay_int);
             if (aoa <= 22.5f)
+            {
                 master_i2c_send('7', ADDR_LCD); // W
+                rgb_led_continue(0);
+            }
             else if (aoa <= 67.5f)
+            {
                 master_i2c_send('8', ADDR_LCD); // NW
+                rgb_led_continue(1);
+            }
             else if (aoa <= 112.5f)
+            {
                 master_i2c_send('1', ADDR_LCD); // N
+                rgb_led_continue(2);
+            }
             else if (aoa <= 157.5f)
+            {
                 master_i2c_send('2', ADDR_LCD); // NE
+                rgb_led_continue(1);
+            }
             else // aoa <= 180
+            {
                 master_i2c_send('3', ADDR_LCD); // E
+                rgb_led_continue(0);
+            }
         }
     }
 }
@@ -231,17 +247,16 @@ __interrupt void ISR_TB1_CCR0(void) {
     } else {
         right_row[sample_index] = voltage;
         ADCMCTL0 = ADCINCH_2;  // Switch to A2 (left)
-        sample_index++;
+        sample_index = (sample_index + 1) % SAMPLE_SIZE;
+
+        if (filled_samples < SAMPLE_SIZE) {
+            filled_samples++;
+        } else if (sample_index % SAMPLE_STEP == 0) {
+            adc_ready = true;
+        }
     }
 
     readLeft = !readLeft;
-
-    if (sample_index >= SAMPLE_SIZE) {
-        sample_index = 0;
-        adc_ready = true;
-    }
-
     TB1CCTL0 &= ~CCIFG;
 }
-
 //-- End Interrupt Service Routines ------------------------------------
