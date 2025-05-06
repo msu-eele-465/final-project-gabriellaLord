@@ -143,7 +143,7 @@ int find_max_index(const float *arr, int len) {
 
 /* Computes the cross-correlation between two signals x and y
    Stores results in corr and corresponding lags in lag */
-void xcorr(const float *x, const float *y, float *corr, int *lag) {
+void xcorr(volatile float *x, volatile float *y, float *corr, int *lag) {
     int len = 2 * SAMPLE_SIZE - 1;
     int mid = SAMPLE_SIZE - 1;
     int i;
@@ -177,7 +177,9 @@ void calculate_aoa(void) {
     if (ratio > 1.0f) ratio = 1.0f;
     if (ratio < -1.0f) ratio = -1.0f;
 
-    aoa = my_acos(ratio) * 180.0f / PI; // Convert radians to degrees
+    // Calculate angle of arrival [0, 180] b/c only two microphones
+    aoa = my_acos(ratio) * 180.0f / PI;
+
     __no_operation();       // Place a breakpoint here to inspect 'aoa'
 }
 //--End Triangulation Equations-----------------------------------------
@@ -194,27 +196,19 @@ int main(void) {
             adc_ready = false;
             calculate_aoa();    // Compute angle of arrival
             int aoa_int = aoa * 10;
-            timeDelay = timeDelay * 1000000;
+            int timeDelay_int = timeDelay * 1000000;
             send_nat_4_digit('A', aoa_int);
-            send_int_3_digit('B', timeDelay);
-            if ((0 <= aoa && aoa <= 22.5) || (337.5 < aoa && aoa <= 360))
+            send_int_3_digit('B', timeDelay_int);
+            if (aoa <= 22.5f)
                 master_i2c_send('7', ADDR_LCD); // W
-            else if (22.5 < aoa && aoa <= 67.5)
+            else if (aoa <= 67.5f)
                 master_i2c_send('8', ADDR_LCD); // NW
-            else if (67.5 < aoa && aoa <= 112.5)
+            else if (aoa <= 112.5f)
                 master_i2c_send('1', ADDR_LCD); // N
-            else if (112.5 < aoa && aoa <= 157.5)
+            else if (aoa <= 157.5f)
                 master_i2c_send('2', ADDR_LCD); // NE
-            else if (157.5 < aoa && aoa <= 157.5)
+            else // aoa <= 180
                 master_i2c_send('3', ADDR_LCD); // E
-            else if (157.5 < aoa && aoa <= 247.5)
-                master_i2c_send('4', ADDR_LCD); // SE
-            else if (247.5 < aoa && aoa <= 292.5)
-                master_i2c_send('5', ADDR_LCD); // S
-            else if (292.5 < aoa && aoa <= 337.5)
-                master_i2c_send('6', ADDR_LCD); // SW
-            else
-                master_i2c_send('0', ADDR_LCD);
         }
     }
 }
