@@ -1,25 +1,27 @@
 # Final project proposal
 
-- [ ] I have reviewed the project guidelines.
-- [ ] I will be working alone on this project.
-- [ ] No significant portion of this project will be (or has been) used in other course work.
+- [X] I have reviewed the project guidelines.
+- [X] I will be working alone on this project.
+- [X] No significant portion of this project will be (or has been) used in other course work.
 
 ## Embedded System Description
 
-At a high level, explain in 2-3 sentences what your embedded system will do.  Then, in 1-2 sentences each, explain each input, the process, and each output. This section is the bulk of the proposal.
+My system will use three equidistant microphones (CMEJ-0706-42-P) to triangulate the direction a sound comes from in a 2D plane. It will then display the result on the LCD. The three microphones will be inputs connected to an MSP430fr20310 slave. The LCD will be an output connected to a second MSP430fr2310 slave. There will also be an additional keypad input connected to the MSP430fr2355 to set the sensitivity level of the microphones and request information from the microphones. The slaves will communicate to the master using I2C. An RGB LED will be used to show the status of the system.
 
 ## Hardware Setup
 
-What hardware will you require? Provide a conceptual circuit diagram and/or block diagram to help the reviewers understand your proposal. Be sure to introduce and discuss your figures in the text.
+I will need to order 3 CMEJ-0706-42-P microphones. Other required hardware, which I have, is: 1 MSP430fr2355; 2 MSP430fr2310; 1 Parallax Membrane Keypad; 1 NHD-0216HZ-FSW-FBW-33V3C LCD; 1 RGB LED. The figure shown below is the circuit diagram for this project proposal.
 
+![CircuitDiagram-gabby](../assets/CircuitDiagram-gabby.svg)
 ## Software overview
 
-Discuss, at a high level, a concept of how your code will work. Include a *high-level* flowchart. This is a high-level concept that should concisely communicate the project's concept.
+The microphone slave will have code to triangulate the direction of the sound and send coordinates to the master. The master will take the coordinates from the microphone slave and send it to the LCD slave to display the information.
+
+![FlowChart-gabby](../assets/FlowChart-gabby.svg)
 
 ## Testing Procedure
 
-Briefly describe how you will test and verify that your project is a success. Think about how you will *demo* the final project. If you need extra equipment for the demo, be sure that you can either bring the equipment or convincingly simulate it. For example, if you want to build a system that uses CAN bus to interface with your car, you won't be able to bring your car into Cobleigh for the demo...
-
+Demo may be difficult if the room is too loud, but I should be able to make a sound and have the LCD display interpretable information that matches with the direction of the sound.
 
 ## Prescaler
 
@@ -28,7 +30,7 @@ Desired Prescaler level:
 - [ ] 100%
 - [ ] 95% 
 - [ ] 90% 
-- [ ] 85% 
+- [X] 85% 
 - [ ] 80% 
 - [ ] 75% 
 
@@ -37,32 +39,32 @@ Desired Prescaler level:
 **Outline how you meet the requirements for your desired prescalar level**
 
 **The inputs to the system will be:**
-1.  Short description of input #1
-2.  
+1.  Parallax Membrane Keypad
+2.  CMEJ-0706-42-P microphone #1
+3.  CMEJ-0706-42-P microphone #2
+4.  CMEJ-0706-42-P microphone #3
 
 **The outputs of the system will be:**
-1.   Short description of output #1
-2. 
+1.  NHD-0216HZ-FSW-FBW-33V3C LCD
+2.  RGB LED
 
 **The project objective is**
 
-{text – 1 to 2 sentences}
+Display the location a sound is coming from. Especially useful for locating that intemittent beeping somewhere in the house that you can never find.
 
 **The new hardware or software modules are:**
-1. Short description of new hardware or software module
-2. 
+1. The new hardware module are 3x microphones. They are analog voltage outputs, but I will need to build an equation to get coordinates from three different inputs.
 
 
 The Master will be responsible for:
 
-{text – 1 to 2 sentences}
+Setting the sensitivity of the microphones and requesting the system to start up. It will also be responsible for driving the RGB LED.
 
 The Slave(s) will be responsible for:
 
-{text – 1 to 2 sentences}
-
+Determining the location a sound originates from (slave #1) and displaying the direction (slave #2).
 
 
 ### Argument for Desired Prescaler
 
-Consider the guidelines presented in the lecture notes and convince the reviewers that this proposal meets the minimum requirements for your desired prescale level.
+I meet all the requirements for the 85% prescalar. I have 4 inputs, 2 outputs, use a master/slave topology, my real objective is to locate sounds, and I am implementing on new hardware that is easy to use (besides the fact that triangulating may be difficult, I won't really know until I start).
