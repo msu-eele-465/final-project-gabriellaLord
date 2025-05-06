@@ -2,15 +2,21 @@
 #include <stdint.h>
 #include <math.h>
 
-#define SAMPLE_SIZE 50
-#define SPEED_OF_SOUND 343.0f
-#define MIC_DISTANCE 0.26f
-#define FS 48000.0f
-#define PI 3.1415926f
+//------------------------------------------------------------------------------
+// Constants and Definitions
+//------------------------------------------------------------------------------
+#define SAMPLE_SIZE 50                  // Number of samples per channel
+#define SPEED_OF_SOUND 343.0f           // Speed of sound in m/s
+#define MIC_DISTANCE 0.26f              // Distance between microphones in meters
+#define FS 48000.0f                     // Sampling frequency in Hz
+#define PI 3.1415926f                   // Pi constant
 
-float crossCorr[2 * SAMPLE_SIZE - 1];
-int lags[2 * SAMPLE_SIZE - 1];
-volatile float aoa;
+//------------------------------------------------------------------------------
+// Global Variables
+//------------------------------------------------------------------------------
+float crossCorr[2 * SAMPLE_SIZE - 1];   // Cross-correlation results
+int lags[2 * SAMPLE_SIZE - 1];          // Lags associated with each correlation value
+volatile float aoa;                     // Calculated angle of arrival (degrees)              
 
 float rightRow[SAMPLE_SIZE] = {
     -2.1384e-07,-3.0917e-08,-7.7229e-07,-1.6274e-08,-1.1641e-06,3.7442e-09,-1.2171e-06,2.2525e-08,
@@ -30,15 +36,25 @@ float leftRow[SAMPLE_SIZE] = {
     2.2007e-10,-9.7276e-10
 };
 
+//------------------------------------------------------------------------------
+// Function to initialize the system
+//------------------------------------------------------------------------------
 void system_init(void) {
-    WDTCTL = WDTPW | WDTHOLD; // Stop watchdog timer
-    PM5CTL0 &= ~LOCKLPM5;     // Enable GPIO
+    WDTCTL = WDTPW | WDTHOLD;   // Stop watchdog timer
+    PM5CTL0 &= ~LOCKLPM5;       // Enable GPIO
 }
 
+//------------------------------------------------------------------------------
+// Custom implementation of fabsf for float absolute value
+//------------------------------------------------------------------------------
 float my_fabs(float x) {
-    return (x < 0) ? -x : x;
+    return (x < 0) ? -x : x;    // Ternary operator returns absolute value
 }
 
+//------------------------------------------------------------------------------
+// Custom approximation of acos(x) using a truncated Taylor series
+// Valid for inputs in range [-1, 1]
+//------------------------------------------------------------------------------
 float my_acos(float x) {
     if (x > 1.0f) x = 1.0f;
     if (x < -1.0f) x = -1.0f;
@@ -57,7 +73,9 @@ float my_acos(float x) {
     return result;
 }
 
-
+//------------------------------------------------------------------------------
+// Finds the index of the maximum absolute value in an array
+//------------------------------------------------------------------------------
 int find_max_index(const float *arr, int len) {
     int maxIndex = 0;
     float maxVal = my_fabs(arr[0]);
@@ -72,6 +90,10 @@ int find_max_index(const float *arr, int len) {
     return maxIndex;
 }
 
+//------------------------------------------------------------------------------
+// Computes the cross-correlation between two signals x and y
+// Stores results in corr and corresponding lags in lag
+//------------------------------------------------------------------------------
 void xcorr(const float *x, const float *y, float *corr, int *lag) {
     int len = 2 * SAMPLE_SIZE - 1;
     int mid = SAMPLE_SIZE - 1;
@@ -92,6 +114,9 @@ void xcorr(const float *x, const float *y, float *corr, int *lag) {
     }
 }
 
+//------------------------------------------------------------------------------
+// Calculates the angle of arrival (AOA) of a sound wave in degrees
+//------------------------------------------------------------------------------
 void calculate_aoa(void) {
     int len = 2 * SAMPLE_SIZE - 1;
     xcorr(leftRow, rightRow, crossCorr, lags);
@@ -100,18 +125,23 @@ void calculate_aoa(void) {
     float timeDelay = (float)lags[index] / FS;
 
     float ratio = timeDelay * SPEED_OF_SOUND / MIC_DISTANCE;
+    
+    // Clamp the value to the valid domain of acos
     if (ratio > 1.0f) ratio = 1.0f;
     if (ratio < -1.0f) ratio = -1.0f;
 
-    aoa = my_acos(ratio) * 180.0f / PI;
-    __no_operation(); // Place a breakpoint here to inspect `aoa`
+    aoa = my_acos(ratio) * 180.0f / PI; // Convert radians to degrees
+    __no_operation();       // Place a breakpoint here to inspect `aoa`
 }
 
+//------------------------------------------------------------------------------
+// Main routine
+//------------------------------------------------------------------------------
 int main(void) {
-    system_init();
-    calculate_aoa();
+    system_init();          // Configure MSP430
+    calculate_aoa();        // Compute angle of arrival
 
     while (1) {
-        __no_operation();
+        __no_operation();   // Idle loop
     }
 }
