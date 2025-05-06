@@ -11,9 +11,8 @@
 #define SAMPLE_SIZE 25                      // Number of samples per channel
 #define SPEED_OF_SOUND 343.0f               // Speed of sound in m/s
 #define MIC_DISTANCE 0.26f                  // Distance between microphones in meters
-//#define FS 48000.0f                         // Sampling frequency in Hz
 #define PI 3.1415926f                       // Pi constant
-#define FS 12000.0f  // Sampling frequency in Hz (reduced to avoid aliasing)
+#define FS 12000.0f                         // Sampling frequency in Hz (reduced to avoid aliasing)
 
 
 //------------------------------------------------------------------------------
@@ -27,26 +26,6 @@ volatile unsigned int adc_result = 0;       // Reading from ADC
 volatile unsigned int sample_index = 0;     // Start at the begining of the array
 volatile float left_row[SAMPLE_SIZE] = {0};
 volatile float right_row[SAMPLE_SIZE] = {0};
-
-/*
-float right_row[SAMPLE_SIZE] = {
-    -2.1384e-07,-3.0917e-08,-7.7229e-07,-1.6274e-08,-1.1641e-06,3.7442e-09,-1.2171e-06,2.2525e-08,
-    -8.2987e-07,3.3868e-08,-1.3124e-08,3.4024e-08,1.0929e-06,2.2943e-08,2.2277e-06,4.2846e-09,
-    3.0359e-06,-1.5789e-08,3.0644e-06,-3.0647e-08,1.5351e-06,-3.5383e-08,-5.2557e-06,-2.8434e-08,
-    3.7072e-05,-2.2758e-08,9.2267e-06,-1.5806e-09,4.4396e-06,4.3025e-08,1.5836e-06,3.3381e-08,
-    -3.2845e-07,1.6322e-08,-1.4246e-06,3.152e-08,-1.7741e-06,7.7682e-09,-1.522e-06,-3.7298e-08,
-    -8.901e-07,-2.909e-08,-1.3211e-07,-1.9647e-08,5.1789e-07,-3.9126e-08,8.9525e-07,-1.3861e-08,
-    9.3958e-07,3.0321e-08
-};
-
-float left_row[SAMPLE_SIZE] = {
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    -5.5765e-11,-5.2321e-10,-9.4263e-11,-2.2981e-10,8.5175e-11,1.5797e-10,-1.097e-10,-1.1544e-10,
-    1.4495e-09,1.583e-09,-5.0365e-10,-1.4142e-09,1.8965e-09,-1.0096e-09,-2.2691e-09,3.8296e-09,
-    -5.1217e-10,2.8944e-09,4.4063e-09,1.2546e-09,2.3658e-11,5.9089e-09,2.0249e-09,-5.7925e-09,
-    2.2007e-10,-9.7276e-10
-};*/
-
 
 //----------------------------------------------------------------------
 // Initializations
