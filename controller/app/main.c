@@ -21,7 +21,8 @@
 //------------------------------------------------------------------------------
 float crossCorr[2 * SAMPLE_SIZE - 1];       // Cross-correlation results
 int lags[2 * SAMPLE_SIZE - 1];              // Lags associated with each correlation value
-volatile float aoa;                         // Calculated angle of arrival (degrees) 
+volatile float aoa;                         // Calculated angle of arrival (degrees)
+volatile float timeDelay;                   // Calculated time delay (us)
 volatile bool adc_ready = false;            // 
 volatile unsigned int adc_result = 0;       // Reading from ADC
 volatile unsigned int sample_index = 0;     // Start at the begining of the array
@@ -55,7 +56,7 @@ void adc_init(void) {
 
 //----------------------------------------------------------------------
 
-void send_int_4_digit(char mode, int input)
+void send_nat_4_digit(char mode, int input)
 {
     char buffer[5];
     int j;
@@ -71,6 +72,31 @@ void send_int_4_digit(char mode, int input)
         master_i2c_send(buffer[j], ADDR_LCD);
     }
 }
+
+void send_int_3_digit(char mode, int input)
+{
+    char buffer[5]; // Sign + 4 digits + null terminator
+    int j;
+    int value = input;
+
+    if (input < 0) {
+        buffer[0] = '-';
+        value = -input;
+    } else {
+        buffer[0] = '+';
+    }
+
+    buffer[1] = (value / 100) % 10 + '0';
+    buffer[2] = (value / 10) % 10 + '0';
+    buffer[3] = value % 10 + '0';
+    buffer[4] = '\0';
+
+    master_i2c_send(mode, ADDR_LCD);
+    for (j = 0; buffer[j] != '\0'; j++) {
+        master_i2c_send(buffer[j], ADDR_LCD);
+    }
+}
+
 
 //----------------------------------------------------------------------
 // Triangulation Calculations
@@ -143,7 +169,7 @@ void calculate_aoa(void) {
     xcorr(left_row, right_row, crossCorr, lags);
 
     int index = find_max_index(crossCorr, len);
-    float timeDelay = (float)lags[index] / FS;
+    timeDelay = (float)lags[index] / FS;
 
     float ratio = timeDelay * SPEED_OF_SOUND / MIC_DISTANCE;
     
@@ -168,7 +194,9 @@ int main(void) {
             adc_ready = false;
             calculate_aoa();    // Compute angle of arrival
             aoa = aoa * 10;
-            send_int_4_digit('A', aoa);
+            timeDelay = timeDelay * 1000000;
+            send_nat_4_digit('A', aoa);
+            send_int_3_digit('B', timeDelay);
             if (0 <= aoa && aoa <= 22.5)
                 master_i2c_send('7', ADDR_LCD); // W
             else if (22.5 < aoa && aoa <= 67.5)

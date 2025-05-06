@@ -265,19 +265,19 @@ void display_tdoa(char input)
             length_adc++;
             break;
         case 1:
-            lcd_print(string, 0x5);
+            lcd_print(string, 0x45);
             length_adc++;
             break;
         case 2:
-            lcd_print(string, 0x06);
+            lcd_print(string, 0x46);
             length_adc++;
             break;
         case 3:
-            lcd_print(string, 0x07);
+            lcd_print(string, 0x47);
             length_adc++;
             break;
         case 4:
-            lcd_print(string, 0x08);
+            lcd_print(string, 0x48);
             in_temp_adc_mode = false;
             mode = '\0';
             length_adc = 0;
@@ -374,6 +374,8 @@ void display_output(char input)
 
     if (mode == 'A')
         display_angle(input);
+    if (mode == 'B')
+        display_tdoa(input);
 }
 //--End Print Commands--------------------------------------------------
 
