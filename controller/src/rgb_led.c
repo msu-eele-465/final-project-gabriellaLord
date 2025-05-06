@@ -5,124 +5,148 @@
 #include <stdio.h>
 #include "rgb_led.h"
 
-
+/**
+ * @brief Configure RGB LED GPIO pins as outputs and initialize to HIGH
+ */
 void rgb_pins_init()
 {       
-    P1DIR |= BIT5 | BIT6 | BIT7; // Set P1.5, P1.6 y P1.7 as an output 
-    P1OUT |= BIT5 | BIT6 | BIT7; // Initialize outputs as high
+    P1DIR |= BIT5 | BIT6 | BIT7; // Set P1.5, P1.6, P1.7 as outputs
+    P1OUT |= BIT5 | BIT6 | BIT7; // Initialize outputs as high (LEDs off)
 }
 
+/**
+ * @brief Configure TimerB3 for PWM-like control of RGB LED via CCR interrupts
+ */
 void interrupts_init()
 {
-    // Setup Timer B3
-    TB3CTL |= TBCLR;        // Clear timer and dividers
-    TB3CTL |= TBSSEL__ACLK; // Source=ACLK
-    TB3CTL |= MC__UP;       // Mode=UP
-    
-    // Setup Timer Compare IRQ for CCR0 (Pull up)
-    TB3CCR0 = 255;         // CCR0=255
-    TB3CCTL0 |= CCIE;       //Enable TB3 CCR0 Overflow IRQ
-    TB3CCTL0 &= ~CCIFG;     // Clear CCR0 Flag
+    TB3CTL |= TBCLR;          // Clear timer and dividers
+    TB3CTL |= TBSSEL__ACLK;   // Set ACLK as timer source
+    TB3CTL |= MC__UP;         // Set timer mode to UP
 
-    // Setup Timer Compare IRQ for CCR0 (Pull down RED)
-    TB3CCR1 = 225-196;         // CCR1=196
-    TB3CCTL1 |= CCIE;       //Enable TB3 CCR1 Overflow IRQ
-    TB3CCTL1 &= ~CCIFG;     // Clear CCR1 Flag
+    TB3CCR0 = 255;            // Period for PWM
+    TB3CCTL0 |= CCIE;         // Enable CCR0 interrupt (reset RGB pins high)
+    TB3CCTL0 &= ~CCIFG;       // Clear interrupt flag
 
-    // Setup Timer Compare IRQ for CCR0 (Pull down GREEN)
-    TB3CCR2 = 225-62;          // CCR2=62
-    TB3CCTL2 |= CCIE;       //Enable TB3 CCR1 Overflow IRQ
-    TB3CCTL2 &= ~CCIFG;     // Clear CCR2 Flag
+    // RED duty cycle control
+    TB3CCR1 = 220;            // RED
+    TB3CCTL1 |= CCIE;         // Enable CCR1 interrupt
+    TB3CCTL1 &= ~CCIFG;
 
-    // Setup Timer Compare IRQ for CCR0 (Pull down BLUE)
-    TB3CCR3 = 225-29;          //CCR3=29
-    TB3CCTL3 |= CCIE;       //Enable TB3 CCR1 Overflow IRQ
-    TB3CCTL3 &= ~CCIFG;     // Clear CCR3 Flag
+    // GREEN duty cycle control
+    TB3CCR2 = 160;            // GREEN
+    TB3CCTL2 |= CCIE;         // Enable CCR2 interrupt
+    TB3CCTL2 &= ~CCIFG;
 
-    _enable_interrupt();    // Enable Maskable IRQs
+    // BLUE duty cycle control
+    TB3CCR3 = 196;            // BLUE
+    TB3CCTL3 |= CCIE;         // Enable CCR3 interrupt
+    TB3CCTL3 &= ~CCIFG;
+
+    _enable_interrupt();      // Enable maskable interrupts globally
 }
 
-void led_c43e1d(void)           // Red
+/**
+ * @brief Set RGB to red (hex: #c43e1d)
+ */
+void led_c43e1d(void)
 {
-    TB3CCR1 = 220;             // CCR1=196 (Red)
-    TB3CCR2 = 1;              // CCR2=62  (Green)
-    TB3CCR3 = 1;              //CCR3=29   (Blue)
-
+    TB3CCR1 = 220; // RED
+    TB3CCR2 = 1;   // GREEN
+    TB3CCR3 = 1;   // BLUE
 }
 
-void led_c4921d(void)           // Yellow
+/**
+ * @brief Set RGB to yellow (hex: #c4921d)
+ */
+void led_c4921d(void)
 {
-    TB3CCR1 = 220;             // CCR1=196 (Red)
-    TB3CCR2 = 160;             // CCR2=146 (Green)
-    TB3CCR3 = 5;              //CCR3=29   (Blue)
+    TB3CCR1 = 220; // RED
+    TB3CCR2 = 160; // GREEN
+    TB3CCR3 = 5;   // BLUE
 }
 
-void led_1da2c4(void)           // Blue
+/**
+ * @brief Set RGB to blue (hex: #1da2c4)
+ */
+void led_1da2c4(void)
 {
-    TB3CCR1 = 29;              // CCR1=29  (Red)
-    TB3CCR2 = 162;             // CCR2=162 (Green)
-    TB3CCR3 = 196;             //CCR3=196  (Blue)
+    TB3CCR1 = 29;   // RED
+    TB3CCR2 = 162;  // GREEN
+    TB3CCR3 = 196;  // BLUE
 }
 
+/**
+ * @brief Initialize GPIOs, timer, and default LED color
+ */
 void rgb_led_init(void)
 {
     WDTCTL = WDTPW | WDTHOLD;   // Stop watchdog timer
-    PM5CTL0 &= ~LOCKLPM5;       // Turn on GPIO
+    PM5CTL0 &= ~LOCKLPM5;       // Unlock GPIO configuration
 
-    rgb_pins_init();
-    interrupts_init();
-    led_c43e1d();
+    rgb_pins_init();            // Setup LED pins
+    interrupts_init();          // Setup TimerB3 and interrupts
+    led_c43e1d();               // Default LED color (Red)
 }
 
+/**
+ * @brief Change LED color depending on lock state
+ * @param lockState 0: yellow (unlocking), 1: blue (unlocked), default: red (locked)
+ */
 void rgb_led_continue(int lockState)
 {
     switch (lockState) {
-        case 0:                 // Unlocking, set yellow
-            led_c4921d();
+        case 0:
+            led_c4921d(); // Yellow
             break;
-        case 1:                 // Unlocked, set blue
-            led_1da2c4();
+        case 1:
+            led_1da2c4(); // Blue
             break;
-        default:                 // Locked, set red
-            led_c43e1d();
+        default:
+            led_c43e1d(); // Red
             break;
-    
     }
 }
 
-//----------------------------------------------------------------------
-// Begin Interrupt Service Routine
-//----------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Interrupt Service Routines for RGB LED timing
+//------------------------------------------------------------------------------
+
+/**
+ * @brief CCR0 ISR - Sets all RGB pins HIGH (beginning of PWM cycle)
+ */
 #pragma vector = TIMER3_B0_VECTOR
 __interrupt void ISR_TB3_CCR0(void)
 {
-    P1OUT |= BIT5 | BIT6 | BIT7;
-    TB3CCTL0 &= ~CCIFG;
+    P1OUT |= BIT5 | BIT6 | BIT7; // Turn off LEDs by setting pins HIGH
+    TB3CCTL0 &= ~CCIFG;          // Clear interrupt flag
 }
-//----------------------------------------------------------------------
-// CCR1, CCR2, CCR3, and overflow interrupt combined
+
+/**
+ * @brief CCR1/2/3 ISR - Clears RGB pins LOW at duty cycles (PWM effect)
+ */
 #pragma vector = TIMER3_B1_VECTOR
 __interrupt void ISR_TB3_CCRn(void)
 {
-    switch (__even_in_range(TB3IV, 14)) // Handle interrupts by priority
+    switch (__even_in_range(TB3IV, 14)) // TB3IV holds source of interrupt
     {
-        case 0: break;                  // No interrupt
-        case 2:                         // CCR1 interrupt (RED)
-            P1OUT &= ~BIT5;             // RED off
-            TB3CCTL1 &= ~CCIFG;
+        case 0:
+            break; // No interrupt
+        case 2:
+            P1OUT &= ~BIT5;     // RED off
+            TB3CCTL1 &= ~CCIFG; // Clear flag
             break;
-        case 4:                         // CCR2 interrupt (GREEN)
-            P1OUT &= ~BIT6;             // GREEN off
+        case 4:
+            P1OUT &= ~BIT6;     // GREEN off
             TB3CCTL2 &= ~CCIFG;
             break;
-        case 6:                         // CCR3 interrupt (BLUE)
-            P1OUT &= ~BIT7;             // BLUE off
+        case 6:
+            P1OUT &= ~BIT7;     // BLUE off
             TB3CCTL3 &= ~CCIFG;
             break;
-        case 14:                        // Timer overflow
-            TB3CTL &= ~TBIFG;
+        case 14:
+            TB3CTL &= ~TBIFG;   // Clear timer overflow flag
             break;
-        default: break;
+        default:
+            break;
     }
 }
-//--End Interrupt Service Routine---------------------------------------
