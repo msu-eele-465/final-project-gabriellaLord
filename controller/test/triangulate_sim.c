@@ -130,7 +130,14 @@ void calculate_aoa(void) {
     if (ratio > 1.0f) ratio = 1.0f;
     if (ratio < -1.0f) ratio = -1.0f;
 
-    aoa = my_acos(ratio) * 180.0f / PI; // Convert radians to degrees
+    float angle_raw = my_acos(ratio) * 180.0f / PI;
+    if (lags[index] < 0) {
+        aoa = 180.0f - angle_raw;  // right side
+    } else {
+        aoa = 180.0f + angle_raw;  // left side
+    }
+    if (aoa >= 360.0f) aoa -= 360.0f;
+
     __no_operation();       // Place a breakpoint here to inspect `aoa`
 }
 

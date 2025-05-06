@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.1.1 Chrome/132.0.6834.210 Electron/34.3.3 Safari/537.36" version="26.1.1">
   <diagram name="Page-1" id="yvh2sjZVyP59WFYV-sgf">
-    <mxGraphModel dx="538" dy="262" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="1613" dy="786" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -690,19 +690,13 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="D-WZ0X-Vl4iiZI-Lr6XJ-438" value="3x Microphone Block&lt;br&gt;(Refer to App. Circuit)" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;" parent="1" vertex="1">
+        <mxCell id="D-WZ0X-Vl4iiZI-Lr6XJ-438" value="2x Microphone Block&lt;br&gt;(Refer to App. Circuit)" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;fontSize=12;" parent="1" vertex="1">
           <mxGeometry x="409" y="387.65999999999997" width="90" height="74.17" as="geometry" />
         </mxCell>
         <mxCell id="D-WZ0X-Vl4iiZI-Lr6XJ-439" value="" style="endArrow=none;html=1;rounded=0;fontFamily=Helvetica;fontSize=12;exitX=1;exitY=0.921;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="D-WZ0X-Vl4iiZI-Lr6XJ-438" edge="1">
           <mxGeometry width="50" height="50" relative="1" as="geometry">
             <mxPoint x="580" y="426" as="sourcePoint" />
             <mxPoint x="590" y="456" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="D-WZ0X-Vl4iiZI-Lr6XJ-448" value="" style="endArrow=none;html=1;rounded=0;fontFamily=Helvetica;fontSize=12;exitX=1;exitY=0.921;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" edge="1">
-          <mxGeometry width="50" height="50" relative="1" as="geometry">
-            <mxPoint x="499" y="435.83056999999997" as="sourcePoint" />
-            <mxPoint x="590" y="435.86" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="D-WZ0X-Vl4iiZI-Lr6XJ-449" value="" style="endArrow=none;html=1;rounded=0;fontFamily=Helvetica;fontSize=12;exitX=1.011;exitY=0.785;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" edge="1">
@@ -735,13 +729,10 @@
             <mxPoint x="750" y="416" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="D-WZ0X-Vl4iiZI-Lr6XJ-454" value="P1.5" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;connectable=1;fontSize=10;" parent="1" vertex="1">
-          <mxGeometry x="561.12" y="425.83" width="30" height="10" as="geometry" />
-        </mxCell>
-        <mxCell id="D-WZ0X-Vl4iiZI-Lr6XJ-455" value="P1.6" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;connectable=1;fontSize=10;" parent="1" vertex="1">
+        <mxCell id="D-WZ0X-Vl4iiZI-Lr6XJ-455" value="P1.2" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;connectable=1;fontSize=10;" parent="1" vertex="1">
           <mxGeometry x="561" y="435.83" width="30" height="10" as="geometry" />
         </mxCell>
-        <mxCell id="D-WZ0X-Vl4iiZI-Lr6XJ-456" value="P1.7" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;connectable=1;fontSize=10;" parent="1" vertex="1">
+        <mxCell id="D-WZ0X-Vl4iiZI-Lr6XJ-456" value="P1.3" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;connectable=1;fontSize=10;" parent="1" vertex="1">
           <mxGeometry x="561.12" y="445.83" width="30" height="10" as="geometry" />
         </mxCell>
         <mxCell id="lumFThIAuEEFmbtg2JOd-1" value="TLV2374&amp;nbsp; &amp;nbsp;" style="triangle;whiteSpace=wrap;html=1;" parent="1" vertex="1">

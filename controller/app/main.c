@@ -193,11 +193,11 @@ int main(void) {
         if (adc_ready) {
             adc_ready = false;
             calculate_aoa();    // Compute angle of arrival
-            aoa = aoa * 10;
+            int aoa_int = aoa * 10;
             timeDelay = timeDelay * 1000000;
-            send_nat_4_digit('A', aoa);
+            send_nat_4_digit('A', aoa_int);
             send_int_3_digit('B', timeDelay);
-            if (0 <= aoa && aoa <= 22.5)
+            if ((0 <= aoa && aoa <= 22.5) || (337.5 < aoa && aoa <= 360))
                 master_i2c_send('7', ADDR_LCD); // W
             else if (22.5 < aoa && aoa <= 67.5)
                 master_i2c_send('8', ADDR_LCD); // NW
@@ -205,13 +205,13 @@ int main(void) {
                 master_i2c_send('1', ADDR_LCD); // N
             else if (112.5 < aoa && aoa <= 157.5)
                 master_i2c_send('2', ADDR_LCD); // NE
-            else if (157.5 < aoa && aoa <= 180)
+            else if (157.5 < aoa && aoa <= 157.5)
                 master_i2c_send('3', ADDR_LCD); // E
-            else if (22.5 < aoa && aoa <= 67.5)
+            else if (157.5 < aoa && aoa <= 247.5)
                 master_i2c_send('4', ADDR_LCD); // SE
-            else if (22.5 < aoa && aoa <= 67.5)
+            else if (247.5 < aoa && aoa <= 292.5)
                 master_i2c_send('5', ADDR_LCD); // S
-            else if (22.5 < aoa && aoa <= 67.5)
+            else if (292.5 < aoa && aoa <= 337.5)
                 master_i2c_send('6', ADDR_LCD); // SW
             else
                 master_i2c_send('0', ADDR_LCD);
