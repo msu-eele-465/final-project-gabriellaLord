@@ -242,18 +242,86 @@ void lcdInit() {
     lcd_create_char(6, angle);
 
     // Initial display text
-    lcd_print(" xxx.x", 0x00);
-    lcd_print("TDOA:xx s", 0x40);
+    lcd_print(" xxx.x", 0x00);      // Angle in degrees
+    lcd_print("TDOA:xxxx s", 0x40);  // +/- time distance of arrival
 
     // Place angle and degree symbols
     lcdSetCursor(0x00);
     send_data(0x06);        // Custom angle symbol
     lcdSetCursor(0x06);
     send_data(0xDF);        // Built-in degree symbol
-    lcdSetCursor(0x47);
+    lcdSetCursor(0x49);
     send_data(0xE4);        // Built-in mu (μ) symbol
 }
 //--End LCD Init--------------------------------------------------------
+
+void display_tdoa(char input)
+{
+    char string[2];
+    string[0] = input;
+    string[1] = '\0';
+    switch (length_adc) {
+        case 0:
+            length_adc++;
+            break;
+        case 1:
+            lcd_print(string, 0x5);
+            length_adc++;
+            break;
+        case 2:
+            lcd_print(string, 0x06);
+            length_adc++;
+            break;
+        case 3:
+            lcd_print(string, 0x07);
+            length_adc++;
+            break;
+        case 4:
+            lcd_print(string, 0x08);
+            in_temp_adc_mode = false;
+            mode = '\0';
+            length_adc = 0;
+            break;
+        default:
+            in_temp_adc_mode = false;
+            length_adc = 0;
+            break;
+    }
+}
+
+void display_angle(char input)
+{
+    char string[2];
+    string[0] = input;
+    string[1] = '\0';
+    switch (length_adc) {
+        case 0:
+            length_adc++;
+            break;
+        case 1:
+            lcd_print(string, 0x01);
+            length_adc++;
+            break;
+        case 2:
+            lcd_print(string, 0x02);
+            length_adc++;
+            break;
+        case 3:
+            lcd_print(string, 0x03);
+            length_adc++;
+            break;
+        case 4:
+            lcd_print(string, 0x05);
+            in_temp_adc_mode = false;
+            mode = '\0';
+            length_adc = 0;
+            break;
+        default:
+            in_temp_adc_mode = false;
+            length_adc = 0;
+            break;
+    }
+}
 
 //----------------------------------------------------------------------
 // Begin Print Commands
@@ -294,7 +362,18 @@ void display_output(char input)
             lcdSetCursor(0x4F);
             send_data(0x05);
             break;
+        case 'A':
+            mode = 'A';
+            break;
+        case 'B':
+            mode = 'B';
+            break;
+        default:
+            break;
     }
+
+    if (mode == 'A')
+        display_angle(input);
 }
 //--End Print Commands--------------------------------------------------
 
