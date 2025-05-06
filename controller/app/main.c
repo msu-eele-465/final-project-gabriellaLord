@@ -1,218 +1,225 @@
-/*
- * EELE 465, Project 6
- * Gabby and Iker
- *
- * Target device: MSP430FR2355 Master
- */
-
-//----------------------------------------------------------------------
-// Headers
-//----------------------------------------------------------------------
 #include <msp430.h>
+#include <stdint.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include "intrinsics.h"
-#include "..\src\master_i2c.h"
-#include "..\src\rgb_led.h"
-#include "..\src\heartbeat.h"
-//--End Headers---------------------------------------------------------
+#include "../../src/master_i2c.h"
+
+//------------------------------------------------------------------------------
+// Constants and Definitions
+//------------------------------------------------------------------------------
+#define SAMPLE_SIZE 25                      // Number of samples per channel
+#define SPEED_OF_SOUND 343.0f               // Speed of sound in m/s
+#define MIC_DISTANCE 0.26f                  // Distance between microphones in meters
+#define PI 3.1415926f                       // Pi constant
+#define FS 12000.0f                         // Sampling frequency in Hz (reduced to avoid aliasing)
+#define ADDR_LCD 0x38                       // Address of LCD slave
+
+//------------------------------------------------------------------------------
+// Global Variables
+//------------------------------------------------------------------------------
+float crossCorr[2 * SAMPLE_SIZE - 1];       // Cross-correlation results
+int lags[2 * SAMPLE_SIZE - 1];              // Lags associated with each correlation value
+volatile float aoa;                         // Calculated angle of arrival (degrees) 
+volatile bool adc_ready = false;            // 
+volatile unsigned int adc_result = 0;       // Reading from ADC
+volatile unsigned int sample_index = 0;     // Start at the begining of the array
+volatile float left_row[SAMPLE_SIZE] = {0};
+volatile float right_row[SAMPLE_SIZE] = {0};
 
 //----------------------------------------------------------------------
-// Definitions
+// Initializations
 //----------------------------------------------------------------------
-#define PROWDIR     P6DIR  // FORMERLY P1
-#define PROWREN     P6REN
-#define PROWIN      P6IN
-#define PROWOUT     P6OUT
-#define PCOLDIR     P5DIR   // FORMERLY P5
-#define PCOLOUT     P5OUT
-#define RS BIT2  // P1.2 -> RS (Register Select)
-#define EN BIT3  // P1.3 -> Enable
-#define D4 BIT4  // P1.4 -> Data bit 4
-#define D5 BIT5  // P1.5 -> Data bit 5
-#define D6 BIT6  // P1.6 -> Data bit 6
-#define D7 BIT7  // P1.7 -> Data bit 7
-#define COL 4
-#define ROW 4
-#define TABLE_SIZE 4
-#define LCD_ADDR    0x38
-//--End Definitions-----------------------------------------------------
-
-//----------------------------------------------------------------------
-// Variables
-//----------------------------------------------------------------------
-char real_code[] = {'3','9','4','D'};
-char keypad[ROW][COL] = {
-    {'1', '2', '3', 'A'},
-    {'4', '5', '6', 'B'},
-    {'7', '8', '9', 'C'},
-    {'*', '0', '#', 'D'}
-};
-
-volatile bool adc_ready = false;
-volatile unsigned int window_size = 3;
-volatile unsigned int adc_result = 0;
-volatile unsigned int samples[9] = {0};
-volatile unsigned int sample_index = 0;
-volatile unsigned int temp_C = 0;
-volatile unsigned int seconds_total = 0;
-//--End Variables-------------------------------------------------------
-
-//----------------------------------------------------------------------
-// Begin Keypad Portion
-//----------------------------------------------------------------------
-void debounce() {
-    volatile unsigned int i;
-    for (i = 20000; i > 0; i--) {}
+void system_init(void) {
+    WDTCTL = WDTPW | WDTHOLD; // Stop watchdog timer
+    PM5CTL0 &= ~LOCKLPM5;     // Enable GPIO
 }
-//----------------------------------------------------------------------
-void keypad_init(void) 
-{
-    // Set rows as inputs (with pull-up)
-    PROWDIR &= ~0x0F;   // P1.0, P1.1, P1.2, P1.3 as inputs
-    PROWREN |= 0x0F;    // Activate pull-up
-    PROWOUT |= 0x0F;    // Activar pull-up in rows
-    
-    // Set columns as outputs
-    PCOLDIR |= BIT0 | BIT1 | BIT2 | BIT3; // Set P5.0, P5.1, P5.2 y P5.3 as outputs:
-    PCOLOUT &= ~(BIT0 | BIT1 | BIT2 | BIT3);  // Set down the pins P5.0, P5.1, P5.2 y P5.3:
-}
-//--End Keypad Portion--------------------------------------------------
 
-//----------------------------------------------------------------------
-// Begin ADC Portion
-//----------------------------------------------------------------------
-void adc_init(void)
-{
+void adc_init(void) {
     // Configure GPIO
-    P1SEL0 |= BIT3;             // P1.3 = A3 (analog)
-    P1DIR &= ~BIT3;             // Input
+    P1SEL0 |= BIT2 | BIT3;
+    P1DIR &= ~(BIT2 | BIT3);
 
-    // Configure ADC
+    // ADC setup
     ADCCTL0 = ADCSHT_2 | ADCON;
-    ADCCTL1 = ADCSHP | ADCSSEL_1;    // Use sampling timer, ACLK
-    ADCCTL2 = ADCRES_2;              // 12-bit
-    ADCMCTL0 = ADCINCH_3;            // Channel A3
+    ADCCTL1 = ADCSHP | ADCSSEL_2;        // Use SMCLK
+    ADCCTL2 = ADCRES_2;                  // 12-bit resolution
+    ADCMCTL0 = ADCINCH_2;                // Start with A2
 
-    // Timer setup (ACLK = 32768 Hz → 0.5s = 16384)
-    TB1CTL = TBSSEL__ACLK | MC__UP | TBCLR;
-    TB1CCR0 = 16384;
+    // Timer setup for 12 kHz using SMCLK = 1 MHz
+    TB1CTL = TBSSEL__SMCLK | MC__UP | TBCLR;
+    TB1CCR0 = 83;                        // 1 MHz / 12000 Hz ≈ 83.3
     TB1CCTL0 = CCIE;
 }
+
 //----------------------------------------------------------------------
-void adc_off(void)
+
+void send_int_4_digit(char mode, int input)
 {
-    TB1CCTL0 &= ~CCIE;     // Disable Timer1_B0 interrupt
-    TB1CTL = 0;            // Stop Timer1
-    ADCCTL0 &= ~ADCENC;    // Disable ADC conversion
-    ADCCTL0 &= ~ADCON;     // Turn off ADC
-}
-//----------------------------------------------------------------------
-void send_int_3_digit(char mode, int input)
-{
-    char buffer[4];
+    char buffer[5];
     int j;
 
-    buffer[0] = (input / 100) % 10 + '0';
-    buffer[1] = (input / 10) % 10 + '0';
-    buffer[2] = input % 10 + '0';
-    buffer[3] = '\0';
+    buffer[0] = (input / 1000) % 10 + '0';
+    buffer[1] = (input / 100) % 10 + '0';
+    buffer[2] = (input / 10) % 10 + '0';
+    buffer[3] = input % 10 + '0';
+    buffer[4] = '\0';
 
-    master_i2c_send(mode, LCD_ADDR);
+    master_i2c_send(mode, ADDR_LCD);
     for (j = 0; buffer[j] != '\0'; j++) {
-        master_i2c_send(buffer[j], LCD_ADDR);
+        master_i2c_send(buffer[j], ADDR_LCD);
     }
 }
+
 //----------------------------------------------------------------------
-void adc_moving_average(void)
-{
-    unsigned long sum = 0;
+// Triangulation Calculations
+//----------------------------------------------------------------------
+/* Custom implementation of fabsf for float absolute value */
+float my_fabs(float x) {
+    return (x < 0) ? -x : x;
+}
+
+/* Custom approximation of acos(x) using a truncated Taylor series
+   Valid for inputs in range [-1, 1]*/
+float my_acos(float x) {
+    if (x > 1.0f) x = 1.0f;
+    if (x < -1.0f) x = -1.0f;
+
+    float x2 = x * x;
+    float x3 = x2 * x;
+    float x5 = x3 * x2;
+    float x7 = x5 * x2;
+
+    float result = (PI / 2.0f)
+                   - x
+                   - (x3 / 6.0f)
+                   - (3.0f * x5 / 40.0f)
+                   - (5.0f * x7 / 112.0f);
+
+    return result;
+}
+
+/* Finds the index of the maximum absolute value in an array */
+int find_max_index(const float *arr, int len) {
+    int maxIndex = 0;
+    float maxVal = my_fabs(arr[0]);
     int i;
-    for (i = 0; i < window_size; i++) {
-        sum += samples[i];
+    for (i = 1; i < len; i++) {
+        float val = my_fabs(arr[i]);
+        if (val > maxVal) {
+            maxVal = val;
+            maxIndex = i;
+        }
     }
-    unsigned int avg_adc = sum / window_size;
-
-    // Convert ADC to voltage
-    float voltage = (avg_adc * 3.3f) / 4095.0f;
-
-    // LM19 sensor voltage to temperature conversion
-    // Vtemp = -11.69 mV/°C * T + 1.8639 V → Solve for T
-    temp_C = (unsigned int)((1.8639f - voltage) / 0.001169f);
-    send_int_3_digit('Y', temp_C);
+    return maxIndex;
 }
-//--End ADC Portion-----------------------------------------------------
 
+/* Computes the cross-correlation between two signals x and y
+   Stores results in corr and corresponding lags in lag */
+void xcorr(const float *x, const float *y, float *corr, int *lag) {
+    int len = 2 * SAMPLE_SIZE - 1;
+    int mid = SAMPLE_SIZE - 1;
+    int i;
+    int j;
 
-//----------------------------------------------------------------------
-// Begin Polling Keypad
-//----------------------------------------------------------------------
-char keypad_poll(void)
-{
-    char key_pressed = '\0';
+    for (i = 0; i < len; i++) {
+        int shift = i - mid;
+        lag[i] = shift;
+        corr[i] = 0.0f;
 
-    // Continuously poll
-    while (true) {
-        int row, col;
-
-        for (col = 0; col < 4; col++) {
-            // Activate column
-            PCOLOUT &= ~(1 << col);
-            __delay_cycles(1000);
-
-            // Check all rows
-            for (row = 0; row < 4; row++) {
-                if ((PROWIN & (1 << row)) == 0) {
-                    debounce();
-                    if ((PROWIN & (1 << row)) == 0) {
-                        key_pressed = keypad[row][col];
-                        master_i2c_send(key_pressed, LCD_ADDR);   // lcd slave
-                        
-                        // Wait for key release
-                        while ((PROWIN & (1 << row)) == 0);
-                        PCOLOUT |= (1 << col);
-                    }
-                }
+        for (j = 0; j < SAMPLE_SIZE; j++) {
+            int k = j - shift;
+            if (k >= 0 && k < SAMPLE_SIZE) {
+                corr[i] += x[j] * y[k];
             }
-            // Deactivate column
-            PCOLOUT |= (1 << col);
         }
     }
 }
-//----------------------------------------------------------------------
-// Begin Main
-//----------------------------------------------------------------------
-void main(void)
-{
-    keypad_init();
-    heartbeat_init();
-    rgb_led_init();
+
+/* Calculates the angle of arrival (AOA) of a sound wave in degrees */
+void calculate_aoa(void) {
+    int len = 2 * SAMPLE_SIZE - 1;
+    xcorr(left_row, right_row, crossCorr, lags);
+
+    int index = find_max_index(crossCorr, len);
+    float timeDelay = (float)lags[index] / FS;
+
+    float ratio = timeDelay * SPEED_OF_SOUND / MIC_DISTANCE;
+    
+    // Clamp the value to the valid domain of acos
+    if (ratio > 1.0f) ratio = 1.0f;
+    if (ratio < -1.0f) ratio = -1.0f;
+
+    aoa = my_acos(ratio) * 180.0f / PI; // Convert radians to degrees
+    __no_operation();       // Place a breakpoint here to inspect 'aoa'
+}
+//--End Triangulation Equations-----------------------------------------
+
+int main(void) {
+    system_init();              // Configure MSP430
     master_i2c_init();
-      
-    while(true)
-    {
-        keypad_poll();           
+    adc_init();                 // Initalize for ADC     
+    __enable_interrupt();
+    _no_operation();
+
+    while (1) {
+        if (adc_ready) {
+            adc_ready = false;
+            calculate_aoa();    // Compute angle of arrival
+            aoa = aoa * 10;
+            send_int_4_digit('A', aoa);
+            if (0 <= aoa && aoa <= 22.5)
+                master_i2c_send('7', ADDR_LCD); // W
+            else if (22.5 < aoa && aoa <= 67.5)
+                master_i2c_send('8', ADDR_LCD); // NW
+            else if (67.5 < aoa && aoa <= 112.5)
+                master_i2c_send('1', ADDR_LCD); // N
+            else if (112.5 < aoa && aoa <= 157.5)
+                master_i2c_send('2', ADDR_LCD); // NE
+            else if (157.5 < aoa && aoa <= 180)
+                master_i2c_send('3', ADDR_LCD); // E
+            else if (22.5 < aoa && aoa <= 67.5)
+                master_i2c_send('4', ADDR_LCD); // SE
+            else if (22.5 < aoa && aoa <= 67.5)
+                master_i2c_send('5', ADDR_LCD); // S
+            else if (22.5 < aoa && aoa <= 67.5)
+                master_i2c_send('6', ADDR_LCD); // SW
+            else
+                master_i2c_send('0', ADDR_LCD);
+        }
     }
 }
-//--End Main------------------------------------------------------------
 
 //----------------------------------------------------------------------
 // Begin Interrupt Service Routines
 //----------------------------------------------------------------------
 #pragma vector = TIMER1_B0_VECTOR
-__interrupt void ISR_TB1_CCR0(void)
-{
-    ADCCTL0 |= ADCENC | ADCSC;             // Start ADC conversion
-    while (ADCCTL1 & ADCBUSY);             // Wait for result
-    adc_result = ADCMEM0;
+__interrupt void ISR_TB1_CCR0(void) {
+    static bool readLeft = true;
 
-    samples[sample_index++] = adc_result;
-    if (sample_index >= window_size)
-    {
-        sample_index = 0;
-        adc_ready = true;   // Tell main loop to process this
+    ADCCTL0 |= ADCENC | ADCSC;
+    while (ADCCTL1 & ADCBUSY);
+    adc_result = ADCMEM0;
+    float voltage = (adc_result * 3.3f) / 4095.0f;
+
+    if (readLeft) {
+        left_row[sample_index] = voltage;
+        ADCMCTL0 = ADCINCH_3;  // Switch to A3 (right)
+    } else {
+        right_row[sample_index] = voltage;
+        ADCMCTL0 = ADCINCH_2;  // Switch to A2 (left)
+        sample_index++;
     }
 
-    TB1CCTL0 &= ~CCIFG;                    // Clear interrupt flag
+    readLeft = !readLeft;
+
+    if (sample_index >= SAMPLE_SIZE) {
+        sample_index = 0;
+        adc_ready = true;
+    }
+
+    TB1CCTL0 &= ~CCIFG;
 }
+
 //-- End Interrupt Service Routines ------------------------------------
